@@ -162,7 +162,7 @@ public sealed class FeedMonitor(ConfigStore config, ILogger<FeedMonitor> log) : 
     /// Linux, with the address as one argument. rundll32 and open pass it on and exit, so one that hangs is ended after
     /// 15 s; xdg-open can become the browser itself on some desktops, so it is left running.
     /// </summary>
-    private static void OpenInBrowser(Uri uri)
+    internal static void OpenInBrowser(Uri uri)
     {
         var psi = BrowserStart(uri, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
         var p = Process.Start(psi) ?? throw new InvalidOperationException("the browser launcher did not start");

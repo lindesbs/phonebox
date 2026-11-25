@@ -100,6 +100,7 @@ AddMonitor<ObsMonitor>(builder.Services);
 AddMonitor<DiscordMonitor>(builder.Services);
 AddMonitor<SteamMonitor>(builder.Services);
 builder.Services.AddSingleton<SteamLibrary>();
+builder.Services.AddSingleton<NextcloudTasks>();
 builder.Services.AddSingleton(sp => new LyricsService(sp.GetRequiredService<ConfigStore>(), sp.GetRequiredService<ILogger<LyricsService>>()));
 AddMonitor<BatteryMonitor>(builder.Services);
 AddMonitor<RuleEngine>(builder.Services);
@@ -638,6 +639,12 @@ app.MapGet("/api/feeds", (FeedMonitor feeds) =>
     var s = feeds.Snapshot();
     return Results.Json(new { s.Items, s.Updated, s.Errors, canOpen = feeds.OpenAllowed() });
 });
+// Nextcloud tasks for the asking widget ("widget=pageId/widgetId"); the account stays here, the phone opens a task by its
+// id, only with that widget's "Open tasks on the PC" on (off by default).
+app.MapGet("/api/nctasks", async (string? widget, HttpRequest req, NextcloudTasks tasks, CancellationToken ct) =>
+    Results.Json(await tasks.ViewAsync(req.Headers["X-PhoneBox-Device"].ToString(), widget, ct)));
+app.MapPost("/api/nctasks/open", (string? id, string? widget, HttpRequest req, NextcloudTasks tasks) =>
+    tasks.Open(req.Headers["X-PhoneBox-Device"].ToString(), widget, id) is { } error ? Results.BadRequest(new { error }) : Results.Ok(new { ok = true }));
 // Photo frame: ids of the photos in the chosen folder, then one (scaled-down) photo at a time by id.
 app.MapGet("/api/photos", (PhotoFrame photos) =>
 {

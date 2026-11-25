@@ -29,10 +29,12 @@ internal static class StackWidgets
     public static Dictionary<string, JsonElement>? PublicOptions(WidgetConfig w)
     {
         if (w.Type == "command") return w.Options?.Where(o => o.Key is "title" or "interval").ToDictionary();
+        // the Nextcloud address, user and app password stay on this computer
+        if (w.Type == NextcloudTasks.WidgetType) return w.Options?.Where(o => o.Key is "title" or "open" or "showList" or "showDue").ToDictionary();
         if (w.Type != "stack" || w.Options is null) return w.Options;
         var options = w.Options.ToDictionary();
         if (options.ContainsKey("widgets")) options["widgets"] = JsonSerializer.SerializeToElement(Children(w)
-            .Select(child => new { id = child.Id, type = child.Type, enabled = child.Enabled, options = child.Options }));
+            .Select(child => new { id = child.Id, type = child.Type, enabled = child.Enabled, options = PublicOptions(new WidgetConfig { Type = child.Type, Options = child.Options }) }));
         return options;
     }
 }

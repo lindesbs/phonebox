@@ -95,6 +95,34 @@ public static class Ics
 
     public static IEnumerable<CalendarEvent> Parse(string text, DateTime fromUtc, DateTime toUtc) => Parse(text, fromUtc, toUtc, TimeZoneInfo.Local);
 
+    /// <summary>The open VTODOs of one CalDAV resource (completed and cancelled ones are left out): title, due time (Unix ms,
+    /// all-day at local midnight as UTC date), priority (1 high … 9 low, 0 none).</summary>
+    internal static IEnumerable<(string Title, long? Due, bool AllDay, int Priority)> ParseTodos(string text)
+    {
+        List<Prop>? cur = null;
+        var nested = 0;
+        foreach (var line in Unfold(text))
+        {
+            if (line.Equals("BEGIN:VTODO", StringComparison.OrdinalIgnoreCase)) { cur = []; nested = 0; continue; }
+            if (line.Equals("END:VTODO", StringComparison.OrdinalIgnoreCase) && cur is not null)
+            {
+                var p = cur;
+                cur = null;
+                string? V(string name) => p.FirstOrDefault(x => x.Name == name)?.Value;
+                if (V("STATUS")?.Trim().ToUpperInvariant() is "COMPLETED" or "CANCELLED" || V("COMPLETED") is not null) continue;
+                var allDay = false;
+                var due = p.FirstOrDefault(x => x.Name == "DUE") is { } d ? ToUtc(d, out allDay) : null;
+                _ = int.TryParse(V("PRIORITY"), out var prio);
+                yield return (Unescape(V("SUMMARY") ?? ""), due is { } u ? Ms(u) : null, due is not null && allDay, prio is >= 0 and <= 9 ? prio : 0);
+                continue;
+            }
+            if (cur is null) continue;
+            if (line.StartsWith("BEGIN:", StringComparison.OrdinalIgnoreCase)) { nested++; continue; } // VALARM
+            if (line.StartsWith("END:", StringComparison.OrdinalIgnoreCase)) { nested--; continue; }
+            if (nested == 0 && ParseLine(line) is { } prop) cur.Add(prop);
+        }
+    }
+
     /// <param name="local">The zone of floating times and of TZIDs this computer does not know (the computer's own zone).</param>
     internal static IEnumerable<CalendarEvent> Parse(string text, DateTime fromUtc, DateTime toUtc, TimeZoneInfo local)
     {

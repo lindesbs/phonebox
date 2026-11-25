@@ -803,6 +803,12 @@
       if (!feedsCanOpen(await config())) return json({ error: 'Opening articles is off: turn on "Open articles on the PC" in the News feeds widget\'s settings' }, 400);
       return DEMO_FEEDS().some((i) => i.id === q.get('id') && i.openable) ? json({ ok: true }) : json({ error: 'That headline is no longer in the list' }, 400);
     }
+    if (path === '/api/nctasks') return json({ tasks: [
+      { id: 'nc1', title: 'Renew the domain', list: 'Personal', due: now() - 3_600_000, allDay: false, priority: 1 },
+      { id: 'nc2', title: 'Review the pull request', list: 'Work', due: now() + 86_400_000, allDay: false, priority: 5 },
+      { id: 'nc3', title: 'Buy coffee beans', list: 'Shopping', due: null, allDay: false, priority: 0 },
+    ], error: null, canOpen: false, updated: now() });
+    if (path === '/api/nctasks/open' && method === 'POST') return json({ error: 'Opening tasks is off: turn on "Open tasks on the PC" in the widget\'s settings' }, 400);
     if (path === '/api/apps') { const c = await config(); return json({ supported: true, canOpen: widgets(c).some((w) => w.type === 'apps'), apps: DEMO_APPS }); }
     if (path === '/api/apps/open' && method === 'POST') {
       if (!widgets(await config()).some((w) => w.type === 'apps')) return json({ error: 'Add an All apps widget to a page to open apps from the phone' }, 400);

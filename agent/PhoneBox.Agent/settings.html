@@ -2051,6 +2051,8 @@ function optionField(w, o, onValChange) {
       return field(h('textarea', { rows: /^command/.test(o.key) ? 3 : 4, style: /^command/.test(o.key) ? { fontFamily: 'Consolas, monospace', fontSize: '12.5px' } : {}, oninput: (e) => set(o.key, e.target.value) }, v ?? ''),
         o.key === 'command' ? h('span', { class: 'hint' }, t('s.js.runHint'))
           : o.key === 'commandUnix' ? h('span', { class: 'hint' }, t('s.js.commandUnixHint')) : null);
+    case 'password':
+      return field(h('input', { type: 'password', autocomplete: 'off', value: v ?? '', oninput: (e) => set(o.key, e.target.value) }));
     case 'lines':
       return field(h('textarea', { rows: 5, oninput: (e) => set(o.key, e.target.value.split('\n').map((x) => x.trim()).filter(Boolean)) }, (Array.isArray(v) ? v : []).join('\n')));
     case 'color':
@@ -2394,7 +2396,10 @@ function pickFile() {
 // A page file: { "phonebox": "pages", "version": 1, "pages": [...] }. Command widgets keep their commands.
 function exportPages(pages, name) {
   const withCommands = pages.some((p) => (p.widgets || []).some((w) => w.type === 'command' || w.type === 'html'));
-  download(name, { phonebox: 'pages', version: 1, exported: new Date().toISOString(), pages: JSON.parse(JSON.stringify(pages)) });
+  const copy = JSON.parse(JSON.stringify(pages));
+  // passwords stay out of a file that may be shared
+  for (const p of copy) for (const w of p.widgets || []) if (w.options?.password) w.options.password = '';
+  download(name, { phonebox: 'pages', version: 1, exported: new Date().toISOString(), pages: copy });
   toast(withCommands ? 'Exported — it includes command / custom HTML widgets: check them before sharing' : 'Exported');
 }
 async function importPages() {
